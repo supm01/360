@@ -5,24 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="referrer" content="no-referrer">
     <meta name="robots" content="noindex, nofollow">
-    <title>加载中...</title>
+    <title>安全访问</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
         body, html {
             height: 100%;
             overflow: hidden;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
-        
         body {
             background: #676767;
         }
-        
         #contentFrame {
             width: 100%;
             height: 100%;
@@ -31,7 +28,6 @@
             transform: translateZ(0);
             will-change: transform;
         }
-        
         #loading {
             position: fixed;
             top: 0;
@@ -40,12 +36,10 @@
             height: 100%;
             background: #676767;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 9999;
         }
-        
         .spinner {
             width: 50px;
             height: 50px;
@@ -53,20 +47,11 @@
             border-top: 4px solid white;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
-            margin-bottom: 20px;
         }
-        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        
-        .loading-text {
-            color: white;
-            font-size: 16px;
-            font-weight: 500;
-        }
-        
         #errorContainer {
             display: none;
             position: fixed;
@@ -82,29 +67,24 @@
             width: 90%;
             z-index: 10000;
         }
-        
         #errorContainer.show {
             display: block;
         }
-        
         .icon { 
             font-size: 72px; 
             margin-bottom: 20px; 
         }
-        
         h2 { 
             color: #ff5722; 
             margin-bottom: 15px; 
             font-size: 26px;
         }
-        
         p { 
             color: #666; 
             line-height: 1.8; 
             font-size: 15px;
             margin-bottom: 10px;
         }
-        
         .tips {
             margin-top: 25px;
             padding: 20px;
@@ -112,38 +92,16 @@
             border-radius: 12px;
             border-left: 4px solid #676767;
         }
-        
         .tips p {
             color: #999;
             font-size: 13px;
             margin: 0;
-        }
-
-        .retry-btn {
-            display: inline-block;
-            margin-top: 20px;
-            padding: 12px 30px;
-            background: linear-gradient(-225deg, #2CD8D5 0%, #C5C1FF 56%, #FFBAC3 100%);
-            color: white;
-            text-decoration: none;
-            border-radius: 25px;
-            font-weight: 600;
-            transition: all 0.3s;
-            border: none;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .retry-btn:hover {
-            opacity: 0.9;
-            transform: translateY(-2px);
         }
     </style>
 </head>
 <body>
     <div id="loading">
         <div class="spinner"></div>
-        <div class="loading-text">正在加载...</div>
     </div>
     
     <div id="errorContainer">
@@ -153,10 +111,9 @@
         <div class="tips">
             <p id="errorTips">💡 提示：请检查链接是否完整</p>
         </div>
-        <button class="retry-btn" onclick="location.reload()">重新加载</button>
     </div>
     
-    <iframe id="contentFrame" sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation"></iframe>
+    <iframe id="contentFrame"></iframe>
 
     <script>
         function getEncodedUrl() {
@@ -211,60 +168,32 @@
             document.getElementById('errorContainer').classList.add('show');
         }
         
-        function loadTarget(targetUrl) {
+        function loadInIframe(targetUrl) {
             const iframe = document.getElementById('contentFrame');
             const loading = document.getElementById('loading');
+            
+            iframe.loading = 'eager';
             iframe.src = targetUrl;
+            
             let loaded = false;
+            
             iframe.onload = function() {
                 loaded = true;
                 loading.style.display = 'none';
                 iframe.style.display = 'block';
             };
+            
             iframe.onerror = function() {
                 loaded = true;
-                console.log('iframe加载失败，尝试直接跳转');
                 window.location.href = targetUrl;
             };
+            
             setTimeout(function() {
                 if (!loaded) {
                     loading.style.display = 'none';
                     iframe.style.display = 'block';
-                    setTimeout(function() {
-                        if (!loaded) {
-                            const shouldRedirect = confirm('网站加载时间较长，是否直接跳转？');
-                            if (shouldRedirect) {
-                                window.location.href = targetUrl;
-                            }
-                        }
-                    }, 5000);
                 }
-            }, 2000);
-            checkIframeLoading(iframe, targetUrl);
-        }
-        
-        function checkIframeLoading(iframe, targetUrl) {
-            let checkCount = 0;
-            const checkInterval = setInterval(() => {
-                checkCount++;
-                try {
-                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                    if (iframeDoc && iframeDoc.body) {
-                        clearInterval(checkInterval);
-                    }
-                } catch (e) {
-                    if (e.name === 'SecurityError') {
-                        console.log('检测到X-Frame-Options限制，将直接跳转');
-                        clearInterval(checkInterval);
-                        setTimeout(() => {
-                            window.location.href = targetUrl;
-                        }, 1000);
-                    }
-                }
-                if (checkCount > 10) {
-                    clearInterval(checkInterval);
-                }
-            }, 500);
+            }, 1500);
         }
         
         function init() {
@@ -294,22 +223,7 @@
                 );
                 return;
             }
-            logVisit(targetUrl);
-            loadTarget(targetUrl);
-        }
-        
-        function logVisit(url) {
-            try {
-                let visits = JSON.parse(localStorage.getItem('visitHistory') || '[]');
-                visits.unshift({
-                    url: url,
-                    time: new Date().toISOString(),
-                    referrer: document.referrer
-                });
-                visits = visits.slice(0, 50);
-                localStorage.setItem('visitHistory', JSON.stringify(visits));
-            } catch (e) {
-            }
+            loadInIframe(targetUrl);
         }
         
         if (document.readyState === 'loading') {
@@ -317,14 +231,6 @@
         } else {
             init();
         }
-        
-        if (window.self !== window.top) {
-            try {
-                window.top.location = window.self.location;
-            } catch (e) {
-            }
-        }
     </script>
 </body>
 </html>
-
